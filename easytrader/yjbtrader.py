@@ -4,9 +4,10 @@ from __future__ import division
 import json
 import os
 import random
-import re
+import tempfile
 import urllib
 
+import demjson
 import requests
 import six
 
@@ -39,7 +40,7 @@ class YJBTrader(WebTrader):
         if not verify_code:
             return False
         login_status, result = self.post_login_data(verify_code)
-        if login_status == False and throw:
+        if login_status is False and throw:
             raise NotLoginError(result)
         return login_status
 
@@ -49,7 +50,7 @@ class YJBTrader(WebTrader):
         # 获取验证码
         verify_code_response = self.s.get(self.config['verify_code_api'], params=dict(randomStamp=random.random()))
         # 保存验证码
-        image_path = os.path.join(os.getcwd(), 'vcode')
+        image_path = os.path.join(tempfile.gettempdir(), 'vcode')
         with open(image_path, 'wb') as f:
             f.write(verify_code_response.content)
 
@@ -100,6 +101,36 @@ class YJBTrader(WebTrader):
                 stock_code=stock_code
         )
         return self.do(cancel_params)
+
+    @property
+    def current_deal(self):
+        return self.get_current_deal()
+
+    def get_current_deal(self):
+        """获取当日成交列表"""
+        """
+        [{'business_amount': '成交数量',
+        'business_price': '成交价格',
+        'entrust_amount': '委托数量',
+        'entrust_bs': '买卖方向',
+        'stock_account': '证券帐号',
+        'fund_account': '资金帐号',
+        'position_str': '定位串',
+        'business_status': '成交状态',
+        'date': '发生日期',
+        'business_type': '成交类别',
+        'business_time': '成交时间',
+        'stock_code': '证券代码',
+        'stock_name': '证券名称'}]
+        """
+        return self.do(self.config['current_deal'])
+
+    def ipo_enable_amount(self, stock_code):
+        params = dict(
+                self.config['ipo_enable_amount'],
+                stock_code=stock_code
+        )
+        return self.do(params)
 
     # TODO: 实现买入卖出的各种委托类型
     def buy(self, stock_code, price, amount=0, volume=0, entrust_prop=0):
@@ -185,10 +216,7 @@ class YJBTrader(WebTrader):
     def format_response_data(self, data):
         # 获取 returnJSON
         return_json = json.loads(data)['returnJson']
-        add_key_quote = re.sub('\w+:', lambda x: '"%s":' % x.group().rstrip(':'), return_json)
-        # 替换所有单引号到双引号
-        change_single_double_quote = add_key_quote.replace("'", '"')
-        raw_json_data = json.loads(change_single_double_quote)
+        raw_json_data = demjson.decode(return_json)
         fun_data = raw_json_data['Func%s' % raw_json_data['function_id']]
         header_index = 1
         remove_header_data = fun_data[header_index:]

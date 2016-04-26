@@ -18,11 +18,12 @@
 
 * 佣金宝
 * 华泰
-* 银河 (感谢 [ruyiqf](https://github.com/ruyiqf) 的贡献)
+* 银河 by @[ruyiqf](https://github.com/ruyiqf)
+* 广发 by @[ruyiqf](https://github.com/ruyiqf)
 
 ### 模拟交易
 
-* 雪球组合（[说明](doc/xueqiu.md)）
+* 雪球组合 by @[haogefeifei](https://github.com/haogefeifei)（[说明](doc/xueqiu.md)）
 
 ### requirements
 
@@ -37,6 +38,14 @@
 
 ```python
 pip install easytrader
+```
+
+注： `Window` 用户 `pip` 安装时会提示 `No module named xxx`, 请使用 `pip install xxx` 安装对应缺失的 `module`, 然后再重新 `pip install easytrader`
+
+### 升级
+
+```python
+pip install easytrader --upgrade
 ```
 
 ### 用法
@@ -59,13 +68,24 @@ user = easytrader.use('yjb') # 佣金宝支持 ['yjb', 'YJB', '佣金宝']
 ```python
 user = easytrader.use('ht') # 华泰支持 ['ht', 'HT', '华泰']
 ```
+
+
+注: 如果你的华泰账户是以 `08` 开头，而且可以正常登录，但是其他操作返回 `账户记录表不存在` 等错误时，请尝试 `user = easytrader.use('ht', remove_zero=False)`
+
+
 ##### 银河 
 
 ```python
 user = easytrader.use('yh') # 银河支持 ['yh', 'YH', '银河']
 ```
 
-##### 自动登录
+##### 广发
+
+```python
+user = easytrader.use('gf') # 广发支持 ['gf', 'GF', '广发']
+```
+
+#### 登录帐号
 
 ```python
 user.prepare('ht.json') // 或者 yjb.json 或者 yh.json 等配置文件路径
@@ -82,6 +102,7 @@ user.prepare('ht.json') // 或者 yjb.json 或者 yh.json 等配置文件路径
 * 华泰需要配置 `ht.json` 填入相关信息, `trdpwd` 加密后的密码首次需要登录后查看登录 `POST` 的 `trdpwd` 值确定
 * 佣金宝需要配置 `yjb.json` 并填入相关信息, 其中的 `password` 为加密后的 `password`
 * 银河需要配置 `yh.json` 填入相关信息, `trdpwd` 加密后的密码首次需要登录后查看登录 `POST` 的 `trdpwd` 值确定, 以及登录`POST`请求里面的`hardinfo`字段 
+* 雪球配置中 `username` 为邮箱, `account` 为手机, 填两者之一即可，另一项改 `""`
 
 
 [如何获取配置所需信息, 可参考此文章](http://www.jisilu.cn/question/42707)
@@ -262,6 +283,38 @@ user.get_exchangebill('开始日期', '截止日期')   # 指定查询时间段,
 # 未确认的表头有 结算汇率, 备注
 ```
 
+#### 查询当日成交
+
+##### 佣金宝
+
+```python
+user.current_deal
+```
+
+**return**
+
+```python
+[{'business_amount': '成交数量',
+'business_price': '成交价格',
+'entrust_amount': '委托数量',
+'entrust_bs': '买卖方向',
+'stock_account': '证券帐号',
+'fund_account': '资金帐号',
+'position_str': '定位串',
+'business_status': '成交状态',
+'date': '发生日期',
+'business_type': '成交类别',
+'business_time': '成交时间',
+'stock_code': '证券代码',
+'stock_name': '证券名称'}]
+```
+
+#### 查看新股可申购额度(目前仅佣金宝可用)
+
+```python
+user.ipo_enable_amount('股票代码')
+```
+
 ### 命令行模式
 
 #### 登录
@@ -319,3 +372,61 @@ JSONDecodeError: Expecting value
 [交易接口分析以及其他开源量化相关论坛](http://www.celuetan.com) 
 
 [软件实现原理](http://www.jisilu.cn/question/42707)
+
+### 附录
+
+#### 银河的返回
+
+##### balance
+
+```python
+[{
+    '资金帐号': 'x', 
+    '参考市值': 10.1, 
+    '资金余额': 10.1, 
+    '可用资金': 10.1, 
+    '总资产': 10.1, 
+    '股份参考盈亏': 10.1, 
+    '币种': '人民币'
+}]
+```
+
+##### entrust
+
+```python
+[{
+    '委托时间': '11:11:11', 
+    '证券名称': 'x', 
+    '成交数量': 100, 
+    '股东代码': 'x', 
+    '证券代码': 'x', 
+    '状态说明': '已成', 
+    '委托数量': 100, 
+    '委托日期': '20160401', 
+    '交易市场': '深A', 
+    '撤单数量': 0, 
+    '委托价格': 0.999, 
+    '委托序号': '12345', 
+    '买卖标志': '买入'
+}]
+```
+
+##### position
+
+```python
+[{
+    '参考市值': 10.1, 
+    '参考盈亏': -0.0, 
+    '当前持仓': 100, 
+    '股份余额': 100, 
+    '证券名称': 'x', 
+    '参考市价': 0.111, 
+    '卖出冻结': 0, 
+    '买入冻结': 0, 
+    '交易市场': '深A', 
+    '证券代码': '123456', 
+    '盈亏比例(%)': '0.00%', 
+    '股份可用': 100, 
+    '股东代码': 'x'
+}]
+```

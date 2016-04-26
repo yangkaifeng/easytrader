@@ -11,6 +11,7 @@ import threading
 import urllib
 import uuid
 from collections import OrderedDict
+import tempfile
 
 import requests
 import six
@@ -39,10 +40,11 @@ log.debug = remove_heart_log
 class HTTrader(WebTrader):
     config_path = os.path.dirname(__file__) + '/config/ht.json'
 
-    def __init__(self):
+    def __init__(self, remove_zero=True):
         super(HTTrader, self).__init__()
         self.account_config = None
         self.s = None
+        self.remove_zero = remove_zero
 
         self.__set_ip_and_mac()
         self.fund_account = None
@@ -60,10 +62,10 @@ class HTTrader(WebTrader):
                 uuid.getnode())[2:].zfill(12)))[:-1]).upper()
 
     def __get_user_name(self):
-        # 华泰账户以 08 开头的需移除 fund_account 开头的 0
+        # 华泰账户以 08 开头的有些需移除 fund_account 开头的 0
         raw_name = self.account_config['userName']
         use_index_start = 1
-        return raw_name[use_index_start:] if raw_name.startswith('08') else raw_name
+        return raw_name[use_index_start:] if raw_name.startswith('08') and self.remove_zero is True else raw_name
 
     def read_config(self, path):
         super(HTTrader, self).read_config(path)
@@ -104,7 +106,7 @@ class HTTrader(WebTrader):
         # 获取验证码
         verify_code_response = self.s.get(self.config['verify_code_api'])
         # 保存验证码
-        image_path = os.path.join(os.getcwd(), 'vcode')
+        image_path = os.path.join(tempfile.gettempdir(), 'vcode')
         with open(image_path, 'wb') as f:
             f.write(verify_code_response.content)
 
@@ -164,13 +166,16 @@ class HTTrader(WebTrader):
         """
         for account_info in json_data['item']:
             if account_info['stock_account'].startswith('A'):
-                self.__sh_exchange_type = account_info['exchange_type']
+                # 沪 A  股东代码以 A 开头，同时需要是数字，沪 B 帐号以 C 开头
+                if account_info['exchange_type'].isdigit():
+                    self.__sh_exchange_type = account_info['exchange_type']
                 self.__sh_stock_account = account_info['stock_account']
-                log.debug('sh stock account %s' % self.__sh_stock_account)
-            elif account_info['stock_account'].isdigit():
+                log.debug('sh_A stock account %s' % self.__sh_stock_account)
+            # 深 A 股东代码以 0 开头，深 B 股东代码以 2 开头
+            elif account_info['stock_account'].startswith('0'):
                 self.__sz_exchange_type = account_info['exchange_type']
                 self.__sz_stock_account = account_info['stock_account']
-                log.debug('sz stock account %s' % self.__sz_stock_account)
+                log.debug('sz_A stock account %s' % self.__sz_stock_account)
 
         self.__fund_account = json_data['fund_account']
         self.__client_risklevel = json_data['branch_no']

@@ -1,5 +1,4 @@
 # coding: utf-8
-import json
 import os
 import re
 import time
@@ -50,15 +49,20 @@ class WebTrader(object):
 
     def prepare(self, need_data):
         """登录的统一接口
-        :param need_data 登录所需数据"""
+        :param need_data 登录所需数据
+        """
         self.read_config(need_data)
         self.autologin()
 
-    def autologin(self):
-        """实现自动登录"""
-        is_login_ok = self.login()
-        if not is_login_ok:
-            self.autologin()
+    def autologin(self, limit=10):
+        """实现自动登录
+        :param limit: 登录次数限制
+        """
+        for _ in range(limit):
+            if self.login():
+                break
+        else:
+            raise NotLoginError('登录失败次数过多, 请检查密码是否正确 / 券商服务器是否处于维护中 / 网络连接是否正常')
         self.keepalive()
 
     def login(self):
@@ -76,13 +80,16 @@ class WebTrader(object):
         while True:
             if self.heart_active:
                 try:
-                    response = self.balance
+                    response = self.heartbeat()
+                    self.check_account_live(response)
                 except:
                     pass
-                self.check_account_live(response)
                 time.sleep(10)
             else:
                 time.sleep(1)
+
+    def heartbeat(self):
+        return self.balance
 
     def check_account_live(self, response):
         pass
@@ -122,6 +129,16 @@ class WebTrader(object):
         return self.do(self.config['entrust'])
 
     @property
+    def current_deal(self):
+        return self.get_current_deal()
+
+    def get_current_deal(self):
+        """获取当日委托列表"""
+        # return self.do(self.config['current_deal'])
+        # TODO 目前仅在 佣金宝子类 中实现
+        log.info('目前仅在 佣金宝/银河子类 中实现, 其余券商需要补充')
+
+    @property
     def exchangebill(self):
         """
         默认提供最近30天的交割单, 通常只能返回查询日期内最新的 90 天数据。
@@ -140,6 +157,15 @@ class WebTrader(object):
         """
         # TODO 目前仅在 华泰子类 中实现
         log.info('目前仅在 华泰子类 中实现, 其余券商需要补充')
+
+    def ipo_enable_amount(self, stock_code):
+        """
+        获取新股可申购额度
+        :param stock_code: 股票 ID
+        :return:
+        """
+        # TODO 目前仅在 佣金宝 中实现
+        log.info('目前仅在 佣金宝子类 中实现, 其余券商需要补充')
 
     def do(self, params):
         """发起对 api 的请求并过滤返回结果
@@ -172,7 +198,7 @@ class WebTrader(object):
     def fix_error_data(self, data):
         """若是返回错误移除外层的列表
         :param data: 需要判断是否包含错误信息的数据"""
-        pass
+        return data
 
     def format_response_data_type(self, response_data):
         """格式化返回的值为正确的类型
