@@ -47,7 +47,7 @@ class HTTrader(WebTrader):
         self.remove_zero = remove_zero
 
         self.__set_ip_and_mac()
-        self.fund_account = None
+        self.__fund_account = None
 
     def __set_ip_and_mac(self):
         """获取本机IP和MAC地址"""
@@ -61,15 +61,18 @@ class HTTrader(WebTrader):
         self.__mac = ("".join(c + "-" if i % 2 else c for i, c in enumerate(hex(
                 uuid.getnode())[2:].zfill(12)))[:-1]).upper()
 
-    def __get_user_name(self):
-        # 华泰账户以 08 开头的有些需移除 fund_account 开头的 0
-        raw_name = self.account_config['userName']
-        use_index_start = 1
-        return raw_name[use_index_start:] if raw_name.startswith('08') and self.remove_zero is True else raw_name
+#     def __get_user_name(self):
+#         # 华泰账户以 08/05 开头的有些需移除 fund_account 开头的 0
+#         raw_name = self.account_config['userName']
+#         use_index_start = 1
+#         print('raw_name=%s' % raw_name)
+#         _name = raw_name[use_index_start:] if (raw_name.startswith('08') or raw_name.startswith('05')) and self.remove_zero is True else raw_name
+#         print('return name=%s' % _name)
+#         return _name
 
     def read_config(self, path):
         super(HTTrader, self).read_config(path)
-        self.fund_account = self.__get_user_name()
+#         self.__fund_account = self.__get_user_name()
 
     def login(self, throw=False):
         """实现华泰的自动登录"""
@@ -255,7 +258,7 @@ class HTTrader(WebTrader):
                 branch_no=self.__branch_no,
                 op_entrust_way=7,
                 op_station=self.__op_station,
-                fund_account=self.fund_account,
+                fund_account=self.__fund_account,
                 password=self.__trdpwd,
                 identity_type='',
                 ram=random.random()
